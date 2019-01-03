@@ -57,10 +57,15 @@ class _MockUnpickler(_Unpickler):
         except ModuleNotFoundError as e:
             # Just return the full name when the module can't be found
             return "%s.%s" % (module, name)
-        if self.proto >= 4:
-            return _getattribute(sys.modules[module], name)[0]
-        else:
-            return getattr(sys.modules[module], name)
+        try:
+            if self.proto >= 4:
+                return _getattribute(sys.modules[module], name)[0]
+            else:
+                return getattr(sys.modules[module], name)
+        except AttributeError as e:
+            # Just return the full name when only the module but not
+            # the class can be found (e.g. class in __main__)
+            return "%s.%s" % (module, name)
 
     def load_reduce(self):
         stack = self.stack
@@ -194,7 +199,7 @@ class MockObj():
         elif len(self._pickledict) > 0:  # is dict
             return str(self._pickledict)
         else:  # is another type of object
-            return str(self._state)
+            return repr(self)
 
     def __repr__(self):
         if len(self._picklelist) > 0:  # is list
@@ -202,7 +207,12 @@ class MockObj():
         elif len(self._pickledict) > 0:  # is dict
             return repr(self._pickledict)
         else:  # is another type of object
-            return repr(self._state)
+            state = {
+                "class": self._cls,
+                "args": self._args,
+                "__dict__": self._state
+            }
+            return repr(state)
 
     def __reduce__(self):
         module = self._cls.rpartition('.')[0]
