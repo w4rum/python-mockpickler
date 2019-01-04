@@ -178,33 +178,36 @@ class MockObj():
     will also be saved.
     """
     def __init__(self, cls, args):
-        self._cls = cls         # module and class name
-        self._args = args       # constructor arguments
-        self._state = {}        # attributes (__dict__ of original object)
-        self._picklelist = []   # list contents
-        self._pickledict = {}   # dict contents
+        self._cls = cls             # module and class name
+        self._supercls = object     # superclass (object, list, dict, ...)
+        self._args = args           # constructor arguments
+        self._state = {}            # attributes (__dict__ of original object)
+        self._picklelist = []       # list contents
+        self._pickledict = {}       # dict contents
 
     def append(self, obj):
         self._picklelist.append(obj)
+        self._supercls = list
 
     def __setitem__(self, key, value):
         self._pickledict[key] = value
+        self._supercls = dict
 
     def __setstate__(self, state):
         self._state = state
 
     def __str__(self):
-        if len(self._picklelist) > 0:  # is list
+        if self._supercls is list:
             return str(self._picklelist)
-        elif len(self._pickledict) > 0:  # is dict
+        elif self._supercls is dict:  # is dict
             return str(self._pickledict)
         else:  # is another type of object
             return repr(self)
 
     def __repr__(self):
-        if len(self._picklelist) > 0:  # is list
+        if self._supercls is list:
             return repr(self._picklelist)
-        elif len(self._pickledict) > 0:  # is dict
+        elif self._supercls is dict:  # is dict
             return repr(self._pickledict)
         else:  # is another type of object
             state = {
@@ -229,10 +232,10 @@ class MockObj():
         # include an indirection via 'eval'
         constructor = ("__import__('%s', fromlist=['%s']).%s.__new__(__import__('%s', fromlist=['%s']).%s,*%s)"\
                        % (module, name, name, module, name, name, self._args),)
-        if len(self._picklelist) > 0:  # is list
+        if self._supercls is list:
             return (eval, constructor,
                     self._state, iter(self._picklelist), None)
-        elif len(self._pickledict) > 0:  # is dict
+        if self._supercls is dict:
             return (eval, constructor,
                     self._state, None, iter(self._pickledict.items()))
         else:  # is another type of object
