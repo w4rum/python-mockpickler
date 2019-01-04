@@ -105,8 +105,6 @@ class MPGui(tk.Frame):
         if not isinstance(obj, primitive):
             # non-primitive types are searched recursively
             typename = t.__name__
-            if issubclass(t, mockpickle.MockObj):
-                typename = "%s (%s)" % (obj._cls, obj._supercls.__name__)
             me = self.tree.insert(parent, 'end', text=name,
                                   values=(typename, ''))
             self.backbinds[me] = obj
@@ -145,20 +143,6 @@ class MPGui(tk.Frame):
                 it = v()
                 break
 
-        # Unmock items
-        if issubclass(t, mockpickle.MockObj):
-            its = {
-                    dict: lambda: obj._pickledict.items(),
-                    list: lambda: enumerate(obj._picklelist),
-            }
-            for k, v in its.items():
-                if issubclass(t, k):
-                    it = v()
-                    break
-            if it is None:
-                # General mocked objects
-                it = obj._state.items()
-
         if it is None:
             # Fallback for general objects
             it = obj.__dict__.items()
@@ -173,7 +157,7 @@ class MPGui(tk.Frame):
     def updateItem(self, item, value):
         owner, key = self.setters[item]
         t = type(owner[key])
-        print("%s: %s => %s" % (item, owner[key], value))
+        # print("%s: %s => %s" % (item, owner[key], value))
         # Fail when types don't match
         try:
             value = t(value)

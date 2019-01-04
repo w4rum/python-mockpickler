@@ -1,7 +1,7 @@
 # Python MockPickler
 
-Python Pickle variant that wraps unknown classes in a mock class.
-These classes can be pickled again and should load correctly on the system in
+Python `pickle` variant that mocks unknown modules and classes.
+These classes can be pickled again and should load correctly on the system on
 which the pickle was originally created.
 
 ## Usage (Unpickler)
@@ -13,7 +13,7 @@ import mockpickle as pickle
 pickled_data = load_from_somewhere()
 
 mocked_data = pickle.loads(pickled_data)
-mocked_data._state["foo"] = "not_foo"
+mocked_data.foo = "not_foo"
 repickled_data = pickle.dumps(mocked_data)
 ```
 
@@ -22,15 +22,25 @@ Just run `python3 mockpickler-gui` and try not to choke on the bugs.
 
 Oh, and don't look at the code if you value your eyesight.
 
-## Stability
-This is a rather hacky and experimental script.
-The repickling relies on ugly eval statements that dynamically load the unknown
-modules on the target system.
-Because of this, you cannot mockunpickle data that has been dumped with
-mockpickler, so `loads(dumps(x))` will fail.
-This is because the mockunpickler currently can not handle the `__reduce__`
-outputs from `MockObj`.
+## How it works
+Before actually unpickling the data, the `load` functions make a scanning run
+in which they dynamically create missing modules and classes.
+The rest of the `load` and `dump` functions are the same as in the standard
+`pickle` module.
 
-`list` and `dict` subclasses are treated differently because their contents
-are not part of the object attributes (`__dict__`).
-Repickling might fail for subclasses of other built-in types.
+## Limitations
+Since pickles only contain module and class names but not any information
+regarding superclasses, the scanner tries to guess superclasses based on the
+operations that are performed on the mocked classes, e.g. assume `list` as
+superclass when `load_appends` is executed on an object of the class.
+
+Currently, only `list` and `dict` subclasses are detected this way.
+Subclasses of other built-in types, e.g. `set`, might not unpickle properly.
+
+Since the unpickler does not have any information about an unknown class's
+`__getstate__` and `__getnewargs__` functions, the arguments passed to
+`__new__` upon unpickling are preserved so that they're not lost when
+repickling the data.
+This is also done for arguments passed to `__setstate__` if the argument is
+not a `dict`.
+Otherwise, it's simply copied onto `__dict__`.

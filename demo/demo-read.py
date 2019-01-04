@@ -14,11 +14,11 @@ with open(filenameIn, "rb") as f:
 mocked_data = pickle.loads(pickled_data)
 
 print("--- Mocked unpickle:")
-print(mocked_data)
+print(mocked_data.__dict__)
 
 print("--- Manipulating foo in mock object and repickling...")
-mocked_data._state['foo'] = "not_foo"
-print(mocked_data)
+mocked_data.foo = "not_foo"
+print(mocked_data.__dict__)
 repickled_data = pickle.dumps(mocked_data)
 
 with open(filenameOut, "wb") as f:
